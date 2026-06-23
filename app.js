@@ -1,187 +1,214 @@
-const data = window.PROMPT_DATA || [];
+﻿const data = window.PROMPT_DATA || [];
 
-const categorySelect = document.querySelector("#categorySelect");
-const promptSelect = document.querySelector("#promptSelect");
+const categoryCards = document.querySelector("#categoryCards");
+const optionCards = document.querySelector("#optionCards");
+const optionHint = document.querySelector("#optionHint");
 const searchInput = document.querySelector("#searchInput");
-const categoryText = document.querySelector("#categoryText");
-const titleText = document.querySelector("#titleText");
-const ratioBadge = document.querySelector("#ratioBadge");
-const imageBadge = document.querySelector("#imageBadge");
-const fieldInputs = document.querySelector("#fieldInputs");
-const outputPrompt = document.querySelector("#outputPrompt");
-const includeImageNote = document.querySelector("#includeImageNote");
-const includeQualityNote = document.querySelector("#includeQualityNote");
+const subjectInput = document.querySelector("#subjectInput");
+const targetInput = document.querySelector("#targetInput");
+const platformSelect = document.querySelector("#platformSelect");
+const ratioSelect = document.querySelector("#ratioSelect");
+const copyInput = document.querySelector("#copyInput");
+const styleInput = document.querySelector("#styleInput");
+const extraInput = document.querySelector("#extraInput");
 const imageInput = document.querySelector("#imageInput");
 const imagePreview = document.querySelector("#imagePreview");
+const imageHelp = document.querySelector("#imageHelp");
+const selectedCategoryText = document.querySelector("#selectedCategoryText");
+const outputTitle = document.querySelector("#outputTitle");
+const ratioBadge = document.querySelector("#ratioBadge");
+const imageBadge = document.querySelector("#imageBadge");
+const nextSteps = document.querySelector("#nextSteps");
+const outputPrompt = document.querySelector("#outputPrompt");
 const copyButton = document.querySelector("#copyButton");
 const resetButton = document.querySelector("#resetButton");
 const copyStatus = document.querySelector("#copyStatus");
-const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
 
-let activeFilter = "all";
+let selectedCategory = "";
+let selectedId = "";
 let currentImageName = "";
 
-function uniqueCategories() {
+const ratioOptions = [
+  "沿用建議比例",
+  "1:1 方形",
+  "4:5 直式",
+  "9:16 直式",
+  "16:9 橫式",
+  "3:4 直式",
+  "自訂比例"
+];
+
+function categories() {
   return [...new Set(data.map((item) => item.category))];
 }
 
-function ratioGroup(item) {
-  if (item.ratio.includes("16:9")) return "wide";
-  if (item.ratio.includes("9:16") || item.ratio.includes("3:4") || item.ratio.includes("4:5")) return "vertical";
-  return "square";
-}
-
-function filteredItems() {
-  const category = categorySelect.value;
+function itemsForCategory() {
   const keyword = searchInput.value.trim().toLowerCase();
-
   return data.filter((item) => {
-    const matchesCategory = !category || item.category === category;
-    const haystack = `${item.category} ${item.title} ${item.prompt}`.toLowerCase();
-    const matchesSearch = !keyword || haystack.includes(keyword);
-    const matchesFilter =
-      activeFilter === "all" ||
-      (activeFilter === "image" && item.needsImage) ||
-      ratioGroup(item) === activeFilter;
-
-    return matchesCategory && matchesSearch && matchesFilter;
+    const matchCategory = !selectedCategory || item.category === selectedCategory;
+    const text = `${item.category} ${item.title} ${item.prompt}`.toLowerCase();
+    return matchCategory && (!keyword || text.includes(keyword));
   });
 }
 
-function fillCategories() {
-  categorySelect.innerHTML = "";
-  const allOption = document.createElement("option");
-  allOption.value = "";
-  allOption.textContent = "全部分類";
-  categorySelect.append(allOption);
+function categorySummary(category) {
+  const count = data.filter((item) => item.category === category).length;
+  const labels = data
+    .filter((item) => item.category === category)
+    .slice(0, 3)
+    .map((item) => item.title)
+    .join("、");
+  return `${count} 種內容，例如：${labels}`;
+}
 
-  for (const category of uniqueCategories()) {
-    const option = document.createElement("option");
-    option.value = category;
-    option.textContent = category;
-    categorySelect.append(option);
+function renderCategories() {
+  categoryCards.innerHTML = "";
+  for (const category of categories()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "category-card";
+    button.classList.toggle("is-active", category === selectedCategory);
+    button.innerHTML = `<strong>${category}</strong><span>${categorySummary(category)}</span>`;
+    button.addEventListener("click", () => {
+      selectedCategory = category;
+      const first = data.find((item) => item.category === category);
+      selectedId = first ? first.id : "";
+      renderAll();
+    });
+    categoryCards.append(button);
   }
 }
 
-function fillPrompts(keepId) {
-  const items = filteredItems();
-  promptSelect.innerHTML = "";
+function renderOptions() {
+  const items = itemsForCategory();
+  optionCards.innerHTML = "";
+  optionHint.textContent = selectedCategory ? `目前顯示 ${items.length} 個可產出內容。` : "請先選擇一個分類。";
+
+  if (!items.some((item) => item.id === selectedId)) {
+    selectedId = items[0] ? items[0].id : "";
+  }
 
   for (const item of items) {
-    const option = document.createElement("option");
-    option.value = item.id;
-    option.textContent = `${item.number}. ${item.title}`;
-    promptSelect.append(option);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "option-card";
+    button.classList.toggle("is-active", item.id === selectedId);
+    const fields = item.fields ? ` · 可替換：${item.fields}` : "";
+    button.innerHTML = `<strong>${item.number}. ${item.title}</strong><span>${item.ratio}${item.needsImage ? " · 建議參考圖" : ""}${fields}</span>`;
+    button.addEventListener("click", () => {
+      selectedId = item.id;
+      renderAll();
+    });
+    optionCards.append(button);
   }
-
-  if (keepId && items.some((item) => item.id === keepId)) {
-    promptSelect.value = keepId;
-  } else if (items.length) {
-    promptSelect.value = items[0].id;
-  }
-
-  if (!items.length) {
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = "沒有符合的提示詞";
-    promptSelect.append(option);
-  }
-
-  renderSelected();
 }
 
 function selectedItem() {
-  const items = filteredItems();
-  return items.find((item) => item.id === promptSelect.value) || items[0] || data[0];
+  return data.find((item) => item.id === selectedId) || itemsForCategory()[0] || data[0];
 }
 
-function renderFields(item) {
-  fieldInputs.innerHTML = "";
-  for (const field of item.fields) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "field-item";
-
-    const label = document.createElement("label");
-    label.textContent = field;
-
-    const input = document.createElement("input");
-    input.className = "text-input";
-    input.type = "text";
-    input.placeholder = `輸入${field}`;
-    input.dataset.field = field;
-    input.addEventListener("input", renderPrompt);
-
-    wrapper.append(label, input);
-    fieldInputs.append(wrapper);
+function renderRatioOptions(item) {
+  const current = ratioSelect.value || "沿用建議比例";
+  ratioSelect.innerHTML = "";
+  for (const ratio of ratioOptions) {
+    const option = document.createElement("option");
+    option.value = ratio;
+    option.textContent = ratio === "沿用建議比例" ? `沿用建議比例：${item.ratio}` : ratio;
+    ratioSelect.append(option);
   }
+  ratioSelect.value = ratioOptions.includes(current) ? current : "沿用建議比例";
 }
 
-function fieldValues() {
-  return Array.from(fieldInputs.querySelectorAll("input")).filter((input) => input.value.trim());
+function chosenRatio(item) {
+  return ratioSelect.value === "沿用建議比例" ? item.ratio : ratioSelect.value;
 }
 
-function applyFieldValues(prompt) {
-  let result = prompt;
-  for (const input of fieldValues()) {
-    const key = input.dataset.field;
-    const value = input.value.trim();
-    const bracketPattern = new RegExp(`【${escapeRegExp(key)}】`, "g");
-    result = result.replace(bracketPattern, value);
-  }
-  return result;
+function nonEmpty(label, value) {
+  const text = value.trim();
+  return text ? `${label}：${text}` : "";
 }
 
-function escapeRegExp(text) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function renderPrompt() {
-  const item = selectedItem();
-  if (!item) return;
-
+function buildPrompt(item) {
   const lines = [];
-  lines.push(`生成圖片：${item.title}`);
+  lines.push(`請生成圖片：${item.title}`);
   lines.push(`分類：${item.category}`);
-  lines.push(`建議比例：${item.ratio}`);
+  lines.push(`使用平台：${platformSelect.value}`);
+  lines.push(`建議比例：${chosenRatio(item)}`);
 
-  if (includeImageNote.checked && (item.needsImage || currentImageName)) {
-    const name = currentImageName || "請先上傳參考圖片";
-    lines.push(`參考圖片：${name}`);
+  const specs = [
+    nonEmpty("主題或目的", subjectInput.value),
+    nonEmpty("品牌／人物／產品", targetInput.value),
+    nonEmpty("畫面文字", copyInput.value),
+    nonEmpty("風格偏好", styleInput.value),
+    nonEmpty("補充需求", extraInput.value)
+  ].filter(Boolean);
+
+  if (item.needsImage || currentImageName) {
+    specs.push(`參考圖片：${currentImageName || "請先上傳或準備參考圖片"}`);
+  }
+
+  if (specs.length) {
+    lines.push("");
+    lines.push("我的規格：");
+    lines.push(...specs.map((line) => `- ${line}`));
   }
 
   lines.push("");
-  lines.push(applyFieldValues(item.prompt));
+  lines.push("基礎提示詞：");
+  lines.push(item.prompt);
 
-  if (includeQualityNote.checked) {
+  if (item.syntaxExample) {
     lines.push("");
-    lines.push("輸出要求：高解析度、構圖清楚、細節完整、文字清晰可讀，避免亂碼、變形、多餘物件與偏離原提示詞。");
+    lines.push("整理文件語法示意：");
+    lines.push(item.syntaxExample);
   }
 
-  outputPrompt.value = lines.join("\n");
+  lines.push("");
+  lines.push("整合要求：請依照我的規格調整，保留基礎提示詞與語法示意的重點。畫面需高解析度、構圖清楚、文字清晰可讀，避免亂碼、變形、多餘物件與過度裝飾。");
+  return lines.join("\n");
 }
 
-function renderSelected() {
+function renderOutput() {
   const item = selectedItem();
   if (!item) return;
 
-  if (promptSelect.value !== item.id) promptSelect.value = item.id;
-  categoryText.textContent = item.category;
-  titleText.textContent = `${item.number}. ${item.title}`;
-  ratioBadge.textContent = item.ratio;
-  imageBadge.textContent = item.needsImage ? "建議上傳參考圖" : "可直接生成";
+  selectedCategoryText.textContent = item.category;
+  outputTitle.textContent = `${item.number}. ${item.title}`;
+  ratioBadge.textContent = chosenRatio(item);
+  imageBadge.textContent = item.needsImage ? "建議準備參考圖" : "可直接生成";
   imageBadge.classList.toggle("is-warning", item.needsImage);
-  renderFields(item);
-  renderPrompt();
+  imageHelp.textContent = item.needsImage
+    ? "這個內容通常需要參考照片。網站只會預覽，不會上傳或儲存圖片。"
+    : "可選擇圖片當參考；不選也可以直接複製提示詞。";
+
+  nextSteps.innerHTML = "";
+  const steps = item.needsImage
+    ? ["準備或上傳參考圖片。", "填寫主題、文字、風格等規格。", `打開 ${platformSelect.value}，先上傳圖片，再貼上提示詞。`, "送出生成後，依結果微調規格。"]
+    : ["填寫主題、文字、風格等規格。", `打開 ${platformSelect.value}，貼上提示詞。`, "送出生成後，依結果微調規格。"];
+  for (const step of steps) {
+    const li = document.createElement("li");
+    li.textContent = step;
+    nextSteps.append(li);
+  }
+
+  outputPrompt.value = buildPrompt(item);
+}
+
+function renderAll() {
+  const item = selectedItem();
+  renderCategories();
+  renderOptions();
+  if (item) renderRatioOptions(item);
+  renderOutput();
 }
 
 function handleImageUpload() {
   const file = imageInput.files && imageInput.files[0];
   imagePreview.innerHTML = "";
-
   if (!file) {
     currentImageName = "";
     imagePreview.innerHTML = "<span>尚未選擇圖片</span>";
-    renderPrompt();
+    renderOutput();
     return;
   }
 
@@ -190,50 +217,46 @@ function handleImageUpload() {
   image.alt = "參考圖片預覽";
   image.src = URL.createObjectURL(file);
   imagePreview.append(image);
-  renderPrompt();
+  renderOutput();
 }
 
 async function copyPrompt() {
   try {
     await navigator.clipboard.writeText(outputPrompt.value);
-    copyStatus.textContent = "已複製";
   } catch {
     outputPrompt.select();
     document.execCommand("copy");
-    copyStatus.textContent = "已複製";
   }
-
+  copyStatus.textContent = "已複製";
   window.setTimeout(() => {
     copyStatus.textContent = "";
   }, 1800);
 }
 
-function resetFields() {
-  for (const input of fieldInputs.querySelectorAll("input")) {
-    input.value = "";
-  }
-  renderPrompt();
+function resetSpecs() {
+  subjectInput.value = "";
+  targetInput.value = "";
+  copyInput.value = "";
+  styleInput.value = "";
+  extraInput.value = "";
+  ratioSelect.value = "沿用建議比例";
+  renderOutput();
 }
 
-function setFilter(filter) {
-  activeFilter = filter;
-  for (const button of filterButtons) {
-    button.classList.toggle("is-active", button.dataset.filter === filter);
-  }
-  fillPrompts();
-}
-
-categorySelect.addEventListener("change", () => fillPrompts());
-promptSelect.addEventListener("change", renderSelected);
-searchInput.addEventListener("input", () => fillPrompts(promptSelect.value));
-includeImageNote.addEventListener("change", renderPrompt);
-includeQualityNote.addEventListener("change", renderPrompt);
-imageInput.addEventListener("change", handleImageUpload);
-copyButton.addEventListener("click", copyPrompt);
-resetButton.addEventListener("click", resetFields);
-filterButtons.forEach((button) => {
-  button.addEventListener("click", () => setFilter(button.dataset.filter));
+searchInput.addEventListener("input", () => {
+  renderOptions();
+  renderOutput();
 });
 
-fillCategories();
-setFilter("all");
+for (const input of [subjectInput, targetInput, platformSelect, ratioSelect, copyInput, styleInput, extraInput]) {
+  input.addEventListener("input", renderOutput);
+  input.addEventListener("change", renderOutput);
+}
+
+imageInput.addEventListener("change", handleImageUpload);
+copyButton.addEventListener("click", copyPrompt);
+resetButton.addEventListener("click", resetSpecs);
+
+selectedCategory = categories()[0] || "";
+selectedId = data.find((item) => item.category === selectedCategory)?.id || data[0]?.id || "";
+renderAll();
