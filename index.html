@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChatGPT 圖像提示詞工具</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="control-pane" aria-label="提示詞查找">
+      <div class="brand-block">
+        <p class="eyebrow">Image Prompt Library</p>
+        <h1>ChatGPT 圖像提示詞工具</h1>
+      </div>
+
+      <label class="field-label" for="categorySelect">分類</label>
+      <select id="categorySelect"></select>
+
+      <label class="field-label" for="promptSelect">提示詞</label>
+      <select id="promptSelect"></select>
+
+      <label class="field-label" for="searchInput">搜尋</label>
+      <input id="searchInput" type="search" placeholder="輸入社群、海報、照片、桌布...">
+
+      <div class="quick-card">
+        <div class="quick-title">速查</div>
+        <div class="quick-grid">
+          <button type="button" data-filter="all">全部</button>
+          <button type="button" data-filter="image">需圖片</button>
+          <button type="button" data-filter="square">方形</button>
+          <button type="button" data-filter="vertical">直式</button>
+          <button type="button" data-filter="wide">橫式</button>
+        </div>
+      </div>
+
+      <div class="upload-panel">
+        <label class="field-label" for="imageInput">參考圖片</label>
+        <input id="imageInput" type="file" accept="image/*">
+        <div id="imagePreview" class="image-preview">
+          <span>尚未選擇圖片</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace" aria-label="提示詞內容">
+      <header class="prompt-header">
+        <div>
+          <p id="categoryText" class="eyebrow">分類</p>
+          <h2 id="titleText">提示詞標題</h2>
+        </div>
+        <div class="meta-row">
+          <span id="ratioBadge" class="badge">比例</span>
+          <span id="imageBadge" class="badge">圖片</span>
+        </div>
+      </header>
+
+      <section class="editor-grid">
+        <div class="panel">
+          <div class="panel-title">可替換欄位</div>
+          <div id="fieldInputs" class="field-list"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">生成語法設定</div>
+          <label class="checkbox-row">
+            <input id="includeImageNote" type="checkbox" checked>
+            <span>加入參考圖片提醒</span>
+          </label>
+          <label class="checkbox-row">
+            <input id="includeQualityNote" type="checkbox" checked>
+            <span>加入品質與避免亂碼要求</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel prompt-panel">
+        <div class="panel-title">完整可複製提示詞</div>
+        <textarea id="outputPrompt" spellcheck="false"></textarea>
+        <div class="action-row">
+          <button id="copyButton" type="button" class="primary-button">複製提示詞</button>
+          <button id="resetButton" type="button" class="secondary-button">清空替換欄位</button>
+          <span id="copyStatus" role="status"></span>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="prompts-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
